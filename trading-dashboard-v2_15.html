@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SUCHANA - Trading Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0C0F;
+    --panel: #12151A;
+    --panel-2: #171B21;
+    --line: #232830;
+    --gold: #D4A94A;
+    --gold-dim: #8A6F35;
+    --up: #34CC80;
+    --down: #F0565B;
+    --text: #F1F3F5;
+    --muted: #A7B0BD;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --display: 'Fraunces', Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  #dash-root{ font-size:15px; line-height:1.5; }
+  .data-table{
+    width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12.5px;
+  }
+  .data-table th{
+    text-align:left; padding:7px 10px; background:var(--panel-2); color:var(--muted);
+    font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .data-table td{
+    padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  .data-table tbody tr:hover{ background:var(--panel-2); }
+  #dash-root{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .board{
+    background: linear-gradient(180deg, #14171D 0%, #0F1216 100%);
+    border-bottom: 1px solid var(--line);
+    padding: 18px 24px 14px;
+  }
+  .board-top{
+    display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;
+  }
+  .brand{
+    font-family: var(--display);
+    letter-spacing: 0.5px;
+    font-size: 19px;
+    font-weight:600;
+    color: var(--gold);
+  }
+  .brand b{ color: var(--text); font-weight:600; }
+  .brand .sep{ color:var(--line); font-weight:400; margin:0 2px; }
+  .clock{
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .board-stats{
+    display:flex; gap:0; margin-top:14px; border:1px solid var(--line); border-radius:8px; overflow:hidden;
+  }
+  .stat{
+    flex:1; padding:12px 18px; border-right:1px solid var(--line); background: var(--panel);
+  }
+  .stat:last-child{ border-right:none; }
+  .stat-label{ font-size:11px; text-transform:uppercase; letter-spacing:1.3px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+  .stat-value{ font-family:var(--mono); font-size:24px; font-weight:600; letter-spacing:-0.2px; }
+  .stat-value.up{ color:var(--up); }
+  .stat-value.down{ color:var(--down); }
+  .stat-value.gold{ color:var(--gold); }
+
+  .layout{ display:flex; align-items:flex-start; max-width:1320px; margin:0 auto; }
+
+  .sidebar{
+    width:232px; flex-shrink:0; padding:20px 12px; position:sticky; top:0;
+    border-right:1px solid var(--line); min-height:calc(100vh - 96px);
+  }
+  .sidebar-label{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:1.4px; color:var(--muted);
+    padding:6px 12px 8px; font-weight:600;
+  }
+  .tab{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; margin-bottom:2px; border-radius:6px;
+    font-size:14px; color:var(--muted); cursor:pointer;
+    font-family: var(--sans); font-weight:500;
+    border-left:2px solid transparent;
+  }
+  .tab .tab-icon{ font-family:var(--mono); font-size:12px; width:16px; text-align:center; color:inherit; }
+  .tab.active{ color:var(--gold); background:rgba(212,169,74,0.08); border-left-color:var(--gold); }
+  .tab:hover:not(.active){ color: var(--text); background:var(--panel); }
+  .sidebar-divider{ height:1px; background:var(--line); margin:14px 4px; }
+
+  @media (max-width: 720px){
+    .layout{ flex-direction:column; }
+    .sidebar{
+      width:100%; position:static; min-height:0; border-right:none; border-bottom:1px solid var(--line);
+      display:flex; overflow-x:auto; padding:10px 12px; gap:2px;
+    }
+    .sidebar-label, .sidebar-divider{ display:none; }
+    .tab{ white-space:nowrap; border-left:none; border-bottom:2px solid transparent; }
+    .tab.active{ border-left:none; border-bottom-color:var(--gold); }
+    .panel{ padding:16px; }
+  }
+
+  .panel{ padding: 24px 28px; flex:1; min-width:0; }
+  .hidden{ display:none; }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:18px;
+  }
+  .card-title{ font-family:var(--display); font-size:17px; font-weight:600; margin-bottom:13px; color:var(--text); display:flex; justify-content:space-between; align-items:center; }
+  .card-sub{ font-size:13px; color:var(--muted); margin-top:-9px; margin-bottom:16px; line-height:1.55; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:500; }
+  input, select{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:6px; font-size:14px; font-family: var(--sans);
+  }
+  input.mono{ font-family: var(--mono); }
+  input:focus, select:focus{ outline:none; border-color: var(--gold-dim); }
+
+  button{
+    background: var(--gold); color: #14100A; border:none; padding:10px 18px; border-radius:6px;
+    font-size:14px; font-weight:600; cursor:pointer; font-family:var(--sans);
+  }
+  button:hover{ background:#e2bb62; }
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+  }
+  button.ghost:hover{ color:var(--text); border-color:var(--gold-dim); }
+  button.danger{ background:transparent; border:1px solid var(--down); color:var(--down); padding:6px 11px; font-size:12px; }
+  button.cached{ background:transparent; border:1px solid rgba(52,204,128,0.45); color:var(--up); }
+  button.cached:hover{ background:rgba(52,204,128,0.1); border-color:var(--up); }
+
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted);
+    padding:9px 10px; border-bottom:1px solid var(--line); font-weight:600;
+  }
+  td{ padding:10px 10px; border-bottom:1px solid var(--line); font-family: var(--mono); font-size:13.5px; }
+  td.sans{ font-family:var(--sans); font-size:14px; }
+  tr:last-child td{ border-bottom:none; }
+  .pos{ color:var(--up); }
+  .neg{ color:var(--down); }
+  .empty-state{ color:var(--muted); font-size:14px; text-align:center; padding: 26px; }
+
+  .adchart-legend{ display:flex; gap:18px; margin-bottom:10px; }
+  .adchart-legend-item{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); font-family:var(--sans); }
+  .adchart-legend-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .adchart-svg .gridline{ stroke:var(--line); stroke-width:1; }
+  .adchart-svg .axis-label{ fill:var(--muted); font-family:var(--mono); font-size:10px; }
+  .adchart-svg .adv-line{ fill:none; stroke:var(--up); stroke-width:2; }
+  .adchart-svg .dec-line{ fill:none; stroke:var(--down); stroke-width:2; }
+  .adchart-svg .adv-area{ fill:var(--up); opacity:0.08; }
+  .adchart-svg .dec-area{ fill:var(--down); opacity:0.08; }
+  .adchart-svg .adv-dot{ fill:var(--up); }
+  .adchart-svg .dec-dot{ fill:var(--down); }
+  .adchart-svg .date-label{ fill:var(--muted); font-family:var(--mono); font-size:10px; }
+
+  .bars{ display:flex; align-items:flex-end; gap:6px; height:140px; padding-top:10px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+  .bar-track{ width:100%; display:flex; flex-direction:column; justify-content:flex-end; height:100px; gap:1px; }
+  .bar-hi{ background: var(--up); border-radius:2px 2px 0 0; width:100%; }
+  .bar-lo{ background: var(--down); border-radius:0 0 2px 2px; width:100%; }
+  .bar-date{ font-family:var(--mono); font-size:9px; color:var(--muted); white-space:nowrap; transform: rotate(0deg); }
+
+  .helptext{ font-size:13px; color:var(--muted); line-height:1.65; }
+  .helptext code{ background:var(--panel-2); padding:2px 6px; border-radius:4px; font-family:var(--mono); font-size:12px; color:var(--gold); }
+  .status-msg{ font-size:13px; padding:9px 11px; border-radius:6px; margin-top:10px; font-family:var(--mono); }
+  .status-ok{ background:rgba(52,204,128,0.1); color:var(--up); border:1px solid rgba(52,204,128,0.3); }
+  .status-err{ background:rgba(240,86,91,0.1); color:var(--down); border:1px solid rgba(240,86,91,0.3); }
+  .status-info{ background:rgba(212,169,74,0.1); color:var(--gold); border:1px solid rgba(212,169,74,0.3); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div id="dash-root">
+  <div class="board">
+    <div class="board-top">
+      <div class="brand"><b>SUCHANA</b><span class="sep">·</span>MARKET BOARD</div>
+      <div class="clock" id="clock">--</div>
+    </div>
+    <div class="board-stats">
+      <div class="stat">
+        <div class="stat-label">New 52W Highs</div>
+        <div class="stat-value up" id="stat-highs">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">New 52W Lows</div>
+        <div class="stat-value down" id="stat-lows">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Breadth Ratio</div>
+        <div class="stat-value gold" id="stat-ratio">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Watchlist</div>
+        <div class="stat-value" id="stat-watch">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-label">Filters</div>
+      <div class="tab active" data-tab="highlow"><span class="tab-icon">▲▼</span>52W High / Low</div>
+      <div class="tab" data-tab="advdec"><span class="tab-icon">±</span>Advances / Declines</div>
+      <div class="sidebar-divider"></div>
+      <div class="tab" data-tab="watchlist"><span class="tab-icon">★</span>Watchlist</div>
+      <div class="tab" data-tab="settings"><span class="tab-icon">⚙</span>Settings</div>
+    </div>
+
+    <div class="panel">
+
+    <!-- 52W HIGH/LOW TAB -->
+    <div id="tab-highlow">
+      <div class="card">
+        <div class="card-title">Log today's 52-week high/low count</div>
+        <div class="card-sub">Enter counts from NSE's website, a screener, or an API pull. One entry per date — logging again for the same date overwrites it.</div>
+        <div class="row">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="breadth-date" class="mono">
+          </div>
+          <div class="field">
+            <label>New Highs</label>
+            <input type="number" id="breadth-highs" class="mono" placeholder="0" style="width:100px">
+          </div>
+          <div class="field">
+            <label>New Lows</label>
+            <input type="number" id="breadth-lows" class="mono" placeholder="0" style="width:100px">
+          </div>
+          <div class="field">
+            <label>Nifty Close (optional)</label>
+            <input type="number" id="breadth-nifty" class="mono" placeholder="—" style="width:120px">
+          </div>
+          <button onclick="logBreadth()">Log entry</button>
+          <div class="field">
+            <label>Scope</label>
+            <select id="breadth-scope" class="mono" style="height:38px" onchange="onScopeChange()">
+              <option value="all">All stocks (EQ)</option>
+              <option value="nifty50">Nifty 50 only</option>
+            </select>
+          </div>
+          <button class="ghost" id="fetch-highlow-btn" onclick="fetchFromApi()">Fetch from API</button>
+        </div>
+        <div id="breadth-status"></div>
+        <details style="margin-top:10px">
+          <summary style="cursor:pointer;color:var(--muted);font-size:12px">Have API data already? Paste it here to load without calling the API</summary>
+          <div class="row" style="margin-top:8px">
+            <textarea id="paste-json" class="mono" style="width:100%;min-height:70px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:8px" placeholder='Paste the raw JSON response here, e.g. {"status":"success","data":{"high":70,"data":[...]}}'></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>This paste is</label>
+              <select id="paste-type" class="mono">
+                <option value="high">New highs (type=high)</option>
+                <option value="low">New lows (type=low)</option>
+                <option value="both">Both combined (has highs+lows arrays)</option>
+              </select>
+            </div>
+            <button class="ghost" onclick="loadPastedJson()">Load pasted data</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="card" id="detail-card" style="display:none">
+        <div class="card-title">
+          <span>Today's full detail — new highs &amp; lows</span>
+          <button class="ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('detail-card').style.display='none'">Hide</button>
+        </div>
+        <div id="detail-tables"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Breadth history</span>
+          <button class="ghost" style="padding:4px 10px;font-size:11px" onclick="clearBreadthHistory()">Clear history</button>
+        </div>
+        <div class="row" style="margin-bottom:18px; align-items:flex-end">
+          <div class="field">
+            <label>From</label>
+            <input type="date" id="breadth-range-from" class="mono" style="width:150px">
+          </div>
+          <div class="field">
+            <label>To</label>
+            <input type="date" id="breadth-range-to" class="mono" style="width:150px">
+          </div>
+          <button class="ghost" style="padding:8px 14px;font-size:12px" onclick="applyBreadthRange()">Apply range</button>
+          <button class="ghost" style="padding:8px 14px;font-size:12px" onclick="resetBreadthRange()">Reset</button>
+        </div>
+        <div id="breadth-chart"><div class="empty-state">No entries yet — log today's count above to start tracking.</div></div>
+      </div>
+    </div>
+
+    <!-- ADVANCES/DECLINES TAB -->
+    <div id="tab-advdec" class="hidden">
+      <div class="card">
+        <div class="card-title">Log today's Advances / Declines</div>
+        <div class="card-sub">NSE's Advances/Declines shows how many stocks rose, fell, or stayed flat today — a different breadth signal from 52-week highs/lows.</div>
+        <div class="row">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="ad-date" class="mono">
+          </div>
+          <div class="field">
+            <label>Advances</label>
+            <input type="number" id="ad-advances" class="mono" placeholder="0" style="width:100px">
+          </div>
+          <div class="field">
+            <label>Declines</label>
+            <input type="number" id="ad-declines" class="mono" placeholder="0" style="width:100px">
+          </div>
+          <div class="field">
+            <label>Unchanged (optional)</label>
+            <input type="number" id="ad-unchanged" class="mono" placeholder="—" style="width:120px">
+          </div>
+          <button onclick="logAdvDec()">Log entry</button>
+          <button class="ghost" id="fetch-advdec-btn" onclick="fetchAdvDecFromApi()">Fetch from API</button>
+        </div>
+        <div id="ad-status"></div>
+        <details style="margin-top:10px">
+          <summary style="cursor:pointer;color:var(--muted);font-size:12px">Have API data already? Paste it here to load without calling the API</summary>
+          <div class="row" style="margin-top:8px">
+            <textarea id="ad-paste-json" class="mono" style="width:100%;min-height:70px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:8px" placeholder='Paste JSON containing advances/declines/unchanged counts, in any key naming'></textarea>
+          </div>
+          <div class="row">
+            <button class="ghost" onclick="loadAdvDecPasted()">Load pasted data</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="card" id="ad-detail-card" style="display:none">
+        <div class="card-title">
+          <span>Today's top gainers &amp; losers</span>
+          <button class="ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('ad-detail-card').style.display='none'">Hide</button>
+        </div>
+        <div id="ad-detail-tables"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Advances / Declines history</span>
+          <button class="ghost" style="padding:4px 10px;font-size:11px" onclick="clearAdvDecHistory()">Clear history</button>
+        </div>
+        <div class="row" style="margin-bottom:18px; align-items:flex-end">
+          <div class="field">
+            <label>From</label>
+            <input type="date" id="ad-range-from" class="mono" style="width:150px">
+          </div>
+          <div class="field">
+            <label>To</label>
+            <input type="date" id="ad-range-to" class="mono" style="width:150px">
+          </div>
+          <button class="ghost" style="padding:8px 14px;font-size:12px" onclick="applyAdRange()">Apply range</button>
+          <button class="ghost" style="padding:8px 14px;font-size:12px" onclick="resetAdRange()">Reset</button>
+        </div>
+        <div id="ad-chart"><div class="empty-state">No entries yet — log today's advances/declines above to start tracking.</div></div>
+      </div>
+    </div>
+
+    <!-- WATCHLIST TAB -->
+    <div id="tab-watchlist" class="hidden">
+      <div class="card">
+        <div class="card-title">Add a stock</div>
+        <div class="row">
+          <div class="field">
+            <label>Symbol</label>
+            <input type="text" id="wl-symbol" class="mono" placeholder="RELIANCE" style="width:120px">
+          </div>
+          <div class="field">
+            <label>Current Price</label>
+            <input type="number" id="wl-price" class="mono" placeholder="0.00" style="width:110px">
+          </div>
+          <div class="field">
+            <label>52W High</label>
+            <input type="number" id="wl-high" class="mono" placeholder="0.00" style="width:110px">
+          </div>
+          <div class="field">
+            <label>Your Buy Price (optional)</label>
+            <input type="number" id="wl-buy" class="mono" placeholder="0.00" style="width:120px">
+          </div>
+          <button onclick="addWatchlistRow()">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Your list</span>
+          <button class="ghost" style="padding:4px 10px;font-size:11px" onclick="refreshWatchlistFromApi()">Refresh from API</button>
+        </div>
+        <div class="card-sub">The API only covers stocks currently at a new 52-week high or low — it can't fetch a live quote for any arbitrary stock. Rows not on today's list are left as-is.</div>
+        <div id="watchlist-status"></div>
+        <div id="watchlist-table"><div class="empty-state">No stocks added yet.</div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="hidden">
+      <div class="card">
+        <div class="card-title">Optional: API connection</div>
+        <div class="helptext" style="margin-bottom:12px">
+          NSE doesn't offer a public API, so most data comes from third-party providers (Parse.bot, Apify actors, RapidAPI listings, or a paid vendor).
+          One endpoint covers both data types this dashboard uses — 52-week highs/lows and advances/declines — as long as your Worker/proxy
+          returns a combined JSON response for both. Enter it here and test it. Many providers block direct browser calls (CORS) even with a
+          valid key — if the test fails, that's usually why, and manual entry above will keep working regardless.
+        </div>
+        <div class="row">
+          <div class="field" style="flex:1; min-width:280px">
+            <label>API Endpoint URL</label>
+            <input type="text" id="api-url" placeholder="https://your-worker.workers.dev" style="width:100%">
+          </div>
+          <div class="field" style="flex:1; min-width:200px">
+            <label>API Key</label>
+            <input type="text" id="api-key" placeholder="X-API-Key value (optional if your Worker doesn't require it)" style="width:100%">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button onclick="testApiConnection()">Test connection</button>
+          <button class="ghost" onclick="saveApiSettings()">Save key (stored locally in browser)</button>
+          <button class="ghost" onclick="clearApiCache()">Clear cached data</button>
+        </div>
+        <div id="api-status"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Backup &amp; restore</div>
+        <div class="helptext" style="margin-bottom:12px">
+          Your data lives in this browser's local storage, tied to this exact file. If you ever open a <em>different copy</em>
+          of this dashboard — a fresh download, a file in a different folder, a different browser or computer — it will look
+          empty, even though yesterday's entries are still sitting safely under the old copy. To carry your history forward:
+          export a backup after logging each day, then import that spreadsheet into whichever copy you open next. Importing
+          merges with what's already loaded — it won't overwrite a date you've already logged today.
+        </div>
+        <div class="row">
+          <button onclick="exportBackup()">Export backup (.xlsx)</button>
+          <div class="field">
+            <label>Backup file</label>
+            <input type="file" id="import-file" accept=".xlsx,.xls,.csv">
+          </div>
+          <button class="ghost" onclick="importBackup()">Import backup</button>
+        </div>
+        <div id="backup-status"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">About this dashboard</div>
+        <div class="helptext">
+          Data is stored locally in your web browser via localStorage — it isn't shared with anyone else, and it isn't sent anywhere except
+          the API endpoint you configure above, if any. Nothing here is financial advice; it's a tool for tracking numbers you choose to log.
+        </div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'dashboard-data';
+  let state = { breadthLog: {}, adLog: {}, watchlist: [], apiUrl: '', apiKey: '', apiCache: null };
+  let breadthRange = { from: null, to: null };
+  let adRange = { from: null, to: null };
+
+  async function loadState(){
+    try{
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if(saved){
+        const parsed = JSON.parse(saved);
+        state = Object.assign(state, parsed);
+      }
+    }catch(e){ console.error('Storage load failed', e); }
+    render();
+  }
+
+  async function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      console.error('Storage save failed', e);
+    }
+  }
+
+  function updateClock(){
+    const now = new Date();
+    const opts = { timeZone: 'Asia/Kolkata', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false };
+    const d = now.toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata', day:'2-digit', month:'short', year:'numeric' });
+    const t = now.toLocaleTimeString('en-IN', opts);
+    document.getElementById('clock').textContent = d + '  ' + t + ' IST';
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ---- Tabs ----
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      ['highlow','advdec','watchlist','settings'].forEach(id=>{
+        document.getElementById('tab-'+id).classList.toggle('hidden', id !== tab.dataset.tab);
+      });
+    });
+  });
+
+  // default date = today
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('breadth-date').value = today;
+  document.getElementById('ad-date').value = today;
+
+  // ---- Breadth ----
+  window.logBreadth = async function(){
+    const date = document.getElementById('breadth-date').value;
+    const highs = parseInt(document.getElementById('breadth-highs').value, 10);
+    const lows = parseInt(document.getElementById('breadth-lows').value, 10);
+    const nifty = document.getElementById('breadth-nifty').value;
+    if(!date || isNaN(highs) || isNaN(lows)){
+      showStatus('breadth-status', 'Enter a date, highs, and lows.', 'err');
+      return;
+    }
+    state.breadthLog[date] = { highs, lows, nifty: nifty ? parseFloat(nifty) : null };
+    await saveState();
+    showStatus('breadth-status', 'Logged ' + date + ' — ' + highs + ' highs / ' + lows + ' lows.', 'ok');
+    render();
+  };
+
+  const NIFTY_50 = new Set([
+    'ADANIENT','ADANIPORTS','APOLLOHOSP','ASIANPAINT','AXISBANK','BAJAJ-AUTO',
+    'BAJFINANCE','BAJAJFINSV','BEL','BHARTIARTL','CIPLA','COALINDIA','DRREDDY',
+    'EICHERMOT','ETERNAL','GRASIM','HCLTECH','HDFCBANK','HDFCLIFE','HINDALCO',
+    'HINDUNILVR','ICICIBANK','INDIGO','INFY','ITC','JIOFIN','JSWSTEEL',
+    'KOTAKBANK','LT','M&M','MARUTI','MAXHEALTH','NESTLEIND','NTPC','ONGC',
+    'POWERGRID','RELIANCE','SBILIFE','SHRIRAMFIN','SBIN','SUNPHARMA','TCS',
+    'TATACONSUM','TMPV','TATASTEEL','TECHM','TITAN','TRENT','ULTRACEMCO','WIPRO'
+  ]);
+
+  function applyApiJson(json, scope, fromCache){
+    // Get the full (all-EQ) lists first, regardless of scope.
+    let allHighs = null, allLows = null;
+
+    if(json.data && Array.isArray(json.data.highs) && Array.isArray(json.data.lows)){
+      allHighs = json.data.highs; allLows = json.data.lows;
+    } else if(Array.isArray(json.highs) && Array.isArray(json.lows)){
+      allHighs = json.highs; allLows = json.lows;
+    } else if(json.data && Array.isArray(json.data)){
+      const h = json.data.filter(x => (x.type||'').toLowerCase().includes('high'));
+      const l = json.data.filter(x => (x.type||'').toLowerCase().includes('low'));
+      if(h.length || l.length){ allHighs = h; allLows = l; }
+      else { allHighs = json.data; allLows = []; }
+    } else if(Array.isArray(json)){
+      allHighs = json; allLows = [];
+    }
+
+    if(allHighs === null && allLows === null){
+      showStatus('breadth-status', 'Connected, but the response shape was not recognized. Raw preview: ' + JSON.stringify(json).slice(0,200), 'err');
+      return;
+    }
+
+    // Filter to Nifty 50 client-side — no extra API call needed for this.
+    const highsList = scope === 'nifty50' ? allHighs.filter(r => NIFTY_50.has(r.symbol)) : allHighs;
+    const lowsList = scope === 'nifty50' ? allLows.filter(r => NIFTY_50.has(r.symbol)) : allLows;
+
+    document.getElementById('breadth-highs').value = highsList.length;
+    document.getElementById('breadth-lows').value = lowsList.length;
+    renderDetailTables(highsList, lowsList, scope === 'nifty50' ? 'Nifty 50' : 'All EQ stocks');
+    const scopeLabel = scope === 'nifty50' ? 'Nifty 50 only' : 'all stocks';
+    if(fromCache){
+      showStatus('breadth-status', 'Loaded from today\'s saved data (' + scopeLabel + ') — no API call made.', 'ok');
+    } else {
+      showStatus('breadth-status', 'Fetched (' + scopeLabel + ') — review the counts below, then click "Log entry" to save.', 'ok');
+    }
+  }
+
+  window.onScopeChange = function(){
+    const scope = document.getElementById('breadth-scope').value;
+    if(state.apiCache && state.apiCache.json){
+      applyApiJson(state.apiCache.json, scope, true);
+    }
+    // If nothing has been fetched yet today, do nothing — user will click Fetch when ready.
+  };
+
+  function extractList(json){
+    if(json && json.data && Array.isArray(json.data.data)) return json.data.data;
+    if(json && Array.isArray(json.data)) return json.data;
+    if(Array.isArray(json)) return json;
+    return null;
+  }
+
+  window.loadPastedJson = async function(){
+    const raw = document.getElementById('paste-json').value.trim();
+    const type = document.getElementById('paste-type').value;
+    if(!raw){
+      showStatus('breadth-status', 'Paste some JSON first.', 'err');
+      return;
+    }
+    let parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(e){
+      showStatus('breadth-status', 'Could not parse that as JSON: ' + e.message, 'err');
+      return;
+    }
+
+    const today = todayIST();
+    // Start from today's existing cache (if any) so pasting "low" after "high" merges, not overwrites.
+    let combined = (state.apiCache && state.apiCache.date === today && state.apiCache.json)
+      ? state.apiCache.json
+      : { highs: [], lows: [] };
+
+    if(type === 'both'){
+      const h = parsed.highs || (parsed.data && parsed.data.highs) || [];
+      const l = parsed.lows || (parsed.data && parsed.data.lows) || [];
+      combined = { highs: h, lows: l };
+    } else {
+      const list = extractList(parsed);
+      if(!list){
+        showStatus('breadth-status', 'Could not find a list of stocks in that JSON.', 'err');
+        return;
+      }
+      if(type === 'high') combined = { highs: list, lows: combined.lows || [] };
+      if(type === 'low') combined = { highs: combined.highs || [], lows: list };
+    }
+
+    state.apiCache = { date: today, json: combined, fetchedAt: new Date().toISOString() };
+    await saveState();
+    const scope = document.getElementById('breadth-scope').value;
+    applyApiJson(combined, scope, true);
+    document.getElementById('paste-json').value = '';
+  };
+
+  function todayIST(){
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+  }
+
+  window.fetchFromApi = async function(forceRefresh){
+    if(!state.apiUrl){
+      showStatus('breadth-status', 'No API endpoint configured yet — set one in Settings.', 'err');
+      return;
+    }
+    const scope = document.getElementById('breadth-scope').value;
+    const today = todayIST();
+
+    // Use the locally cached copy if we already fetched today — costs zero API credits.
+    if(!forceRefresh && state.apiCache && state.apiCache.date === today && state.apiCache.json){
+      applyApiJson(state.apiCache.json, scope, true);
+      return;
+    }
+
+    showStatus('breadth-status', 'Fetching…', 'info');
+    try{
+      const res = await fetch(state.apiUrl, { headers: state.apiKey ? { 'X-API-Key': state.apiKey } : {} });
+      if(!res.ok){
+        const txt = await res.text();
+        showStatus('breadth-status', 'API returned HTTP ' + res.status + ': ' + txt.slice(0,150), 'err');
+        return;
+      }
+      const json = await res.json();
+      state.apiCache = { date: today, json: json, fetchedAt: new Date().toISOString() };
+      await saveState();
+      updateFetchButtonState();
+      applyApiJson(json, scope, false);
+    }catch(e){
+      showStatus('breadth-status', 'Fetch failed (' + e.message + '). Likely CORS — manual entry still works.', 'err');
+    }
+  };
+
+  function detailRow(r){
+    const chg = (r.change ?? 0);
+    const pchg = (r.pChange ?? 0);
+    const color = chg > 0 ? 'var(--up)' : (chg < 0 ? 'var(--down)' : 'inherit');
+    return '<tr>' +
+      '<td class="mono">' + (r.symbol||'') + '</td>' +
+      '<td>' + (r.comapnyName || r.companyName || '') + '</td>' +
+      '<td class="mono">' + (r.series||'') + '</td>' +
+      '<td class="mono">' + (r.ltp ?? '') + '</td>' +
+      '<td class="mono" style="color:' + color + '">' + chg.toFixed(2) + ' (' + pchg.toFixed(2) + '%)</td>' +
+      '<td class="mono">' + (r.new52WHL ?? '') + '</td>' +
+      '<td class="mono">' + (r.prev52WHL ?? '') + '</td>' +
+      '<td class="mono">' + (r.prevClose ?? '') + '</td>' +
+      '<td class="mono">' + (r.prevHLDate ?? '') + '</td>' +
+      '</tr>';
+  }
+
+  function detailTable(title, list){
+    if(!list || list.length === 0){
+      return '<h4 style="margin:16px 0 6px">' + title + ' (0)</h4><div class="empty-state">None today.</div>';
+    }
+    const rows = list.map(detailRow).join('');
+    return '<h4 style="margin:16px 0 6px">' + title + ' (' + list.length + ')</h4>' +
+      '<div style="overflow-x:auto"><table class="data-table"><thead><tr>' +
+      '<th>Symbol</th><th>Company</th><th>Series</th><th>LTP</th><th>Change</th>' +
+      '<th>New 52W H/L</th><th>Prev 52W H/L</th><th>Prev Close</th><th>Prev H/L Date</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  window.renderDetailTables = function(highsList, lowsList, scopeLabel){
+    const card = document.getElementById('detail-card');
+    const container = document.getElementById('detail-tables');
+    const suffix = scopeLabel ? ' — ' + scopeLabel : '';
+    container.innerHTML = detailTable('New 52-week highs' + suffix, highsList) + detailTable('New 52-week lows' + suffix, lowsList);
+    card.style.display = 'block';
+  };
+
+  window.clearBreadthHistory = async function(){
+    if(!confirm('Clear all logged breadth history? This cannot be undone.')) return;
+    state.breadthLog = {};
+    await saveState();
+    render();
+  };
+
+  window.applyBreadthRange = function(){
+    const from = document.getElementById('breadth-range-from').value;
+    const to = document.getElementById('breadth-range-to').value;
+    if(from && to && from > to){
+      showStatus('breadth-status', '"From" date is after "To" date.', 'err');
+      return;
+    }
+    breadthRange = { from: from || null, to: to || null };
+    renderBreadthChart();
+  };
+
+  window.resetBreadthRange = function(){
+    breadthRange = { from: null, to: null };
+    document.getElementById('breadth-range-from').value = '';
+    document.getElementById('breadth-range-to').value = '';
+    renderBreadthChart();
+  };
+
+  function renderBreadthChart(){
+    const allDates = Object.keys(state.breadthLog).sort();
+    const container = document.getElementById('breadth-chart');
+    if(allDates.length === 0){
+      container.innerHTML = '<div class="empty-state">No entries yet — log today\'s count above to start tracking.</div>';
+      return;
+    }
+    let recent;
+    if(breadthRange.from || breadthRange.to){
+      recent = allDates.filter(d => (!breadthRange.from || d >= breadthRange.from) && (!breadthRange.to || d <= breadthRange.to));
+      if(recent.length === 0){
+        container.innerHTML = '<div class="empty-state">No entries logged in that date range.</div>';
+        return;
+      }
+    } else {
+      recent = allDates.slice(-20);
+    }
+
+    const W = 760, H = 240, padL = 44, padR = 16, padT = 16, padB = 30;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxVal = Math.max(1, ...recent.map(d => Math.max(state.breadthLog[d].highs, state.breadthLog[d].lows)));
+    const niceMax = Math.ceil(maxVal / 50) * 50 || maxVal;
+    const stepX = recent.length > 1 ? plotW / (recent.length - 1) : 0;
+    const xAt = i => padL + stepX * i;
+    const yAt = v => padT + plotH - (v / niceMax) * plotH;
+
+    const hiPts = recent.map((d, i) => [xAt(i), yAt(state.breadthLog[d].highs)]);
+    const loPts = recent.map((d, i) => [xAt(i), yAt(state.breadthLog[d].lows)]);
+    const toPath = pts => pts.map(p => p.join(',')).join(' ');
+    const hiArea = `${padL},${padT + plotH} ${toPath(hiPts)} ${xAt(recent.length - 1)},${padT + plotH}`;
+    const loArea = `${padL},${padT + plotH} ${toPath(loPts)} ${xAt(recent.length - 1)},${padT + plotH}`;
+
+    const gridCount = 4;
+    let gridlines = '';
+    for(let g = 0; g <= gridCount; g++){
+      const v = Math.round((niceMax / gridCount) * g);
+      const y = yAt(v);
+      gridlines += `<line class="gridline" x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"></line>
+        <text class="axis-label" x="${padL - 8}" y="${y + 3}" text-anchor="end">${v}</text>`;
+    }
+
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmtDate = d => {
+      const [y, m, day] = d.split('-');
+      return `${parseInt(day,10)} ${monthNames[parseInt(m,10)-1]} ${y}`;
+    };
+    const labelEvery = recent.length > 10 ? Math.ceil(recent.length / 8) : 1;
+    let dateLabels = '';
+    recent.forEach((d, i) => {
+      if(i % labelEvery !== 0 && i !== recent.length - 1) return;
+      dateLabels += `<text class="date-label" x="${xAt(i)}" y="${H - 8}" text-anchor="middle">${fmtDate(d)}</text>`;
+    });
+
+    const hiDots = hiPts.map((p, i) => `<circle class="adv-dot" cx="${p[0]}" cy="${p[1]}" r="3"><title>${recent[i]}: ${state.breadthLog[recent[i]].highs} new highs</title></circle>`).join('');
+    const loDots = loPts.map((p, i) => `<circle class="dec-dot" cx="${p[0]}" cy="${p[1]}" r="3"><title>${recent[i]}: ${state.breadthLog[recent[i]].lows} new lows</title></circle>`).join('');
+
+    container.innerHTML = `
+      <div class="adchart-legend">
+        <div class="adchart-legend-item"><span class="adchart-legend-dot" style="background:var(--up)"></span>New Highs</div>
+        <div class="adchart-legend-item"><span class="adchart-legend-dot" style="background:var(--down)"></span>New Lows</div>
+      </div>
+      <svg class="adchart-svg" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">
+        ${gridlines}
+        <polygon class="adv-area" points="${hiArea}"></polygon>
+        <polygon class="dec-area" points="${loArea}"></polygon>
+        <polyline class="adv-line" points="${toPath(hiPts)}"></polyline>
+        <polyline class="dec-line" points="${toPath(loPts)}"></polyline>
+        ${hiDots}
+        ${loDots}
+        ${dateLabels}
+      </svg>`;
+  }
+
+  // ---- Advances / Declines ----
+  window.logAdvDec = async function(){
+    const date = document.getElementById('ad-date').value;
+    const advances = parseInt(document.getElementById('ad-advances').value, 10);
+    const declines = parseInt(document.getElementById('ad-declines').value, 10);
+    const unchanged = document.getElementById('ad-unchanged').value;
+    if(!date || isNaN(advances) || isNaN(declines)){
+      showStatus('ad-status', 'Enter a date, advances, and declines.', 'err');
+      return;
+    }
+    state.adLog[date] = { advances, declines, unchanged: unchanged ? parseInt(unchanged, 10) : null };
+    await saveState();
+    showStatus('ad-status', 'Logged ' + date + ' — ' + advances + ' advances / ' + declines + ' declines.', 'ok');
+    render();
+  };
+
+  window.clearAdvDecHistory = async function(){
+    if(!confirm('Clear all logged advances/declines history? This cannot be undone.')) return;
+    state.adLog = {};
+    await saveState();
+    render();
+  };
+
+  window.loadAdvDecPasted = async function(){
+    const raw = document.getElementById('ad-paste-json').value.trim();
+    if(!raw){
+      showStatus('ad-status', 'Paste some JSON first.', 'err');
+      return;
+    }
+    let parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(e){
+      showStatus('ad-status', 'Could not parse that as JSON: ' + e.message, 'err');
+      return;
+    }
+    // Look for advances/declines/unchanged keys anywhere in the object, case-insensitively.
+    function findKey(obj, patterns){
+      if(!obj || typeof obj !== 'object') return null;
+      for(const k of Object.keys(obj)){
+        const lower = k.toLowerCase();
+        if(patterns.some(p => lower.includes(p))) return obj[k];
+      }
+      for(const k of Object.keys(obj)){
+        if(typeof obj[k] === 'object'){
+          const found = findKey(obj[k], patterns);
+          if(found !== null) return found;
+        }
+      }
+      return null;
+    }
+    const advances = findKey(parsed, ['advance']);
+    const declines = findKey(parsed, ['decline']);
+    const unchanged = findKey(parsed, ['unchange']);
+    if(advances === null || declines === null){
+      showStatus('ad-status', 'Could not find advances/declines fields in that JSON. Raw preview: ' + raw.slice(0,200), 'err');
+      return;
+    }
+    document.getElementById('ad-advances').value = advances;
+    document.getElementById('ad-declines').value = declines;
+    if(unchanged !== null) document.getElementById('ad-unchanged').value = unchanged;
+    showStatus('ad-status', 'Loaded from pasted data — review below, then click "Log entry" to save.', 'ok');
+    document.getElementById('ad-paste-json').value = '';
+  };
+
+  window.fetchAdvDecFromApi = async function(forceRefresh){
+    if(!state.apiUrl){
+      showStatus('ad-status', 'No API endpoint configured yet — set one in Settings.', 'err');
+      return;
+    }
+    const today = todayIST();
+
+    // Shares the same daily cache as the 52-week high/low fetch — if either
+    // button has already pulled today's combined response, this reuses it
+    // at zero extra API cost.
+    if(!forceRefresh && state.apiCache && state.apiCache.date === today && state.apiCache.json){
+      applyAdvDecApiJson(state.apiCache.json, true);
+      return;
+    }
+
+    showStatus('ad-status', 'Fetching…', 'info');
+    try{
+      const res = await fetch(state.apiUrl, { headers: state.apiKey ? { 'X-API-Key': state.apiKey } : {} });
+      if(!res.ok){
+        const txt = await res.text();
+        showStatus('ad-status', 'API returned HTTP ' + res.status + ': ' + txt.slice(0,150), 'err');
+        return;
+      }
+      const json = await res.json();
+      state.apiCache = { date: today, json: json, fetchedAt: new Date().toISOString() };
+      await saveState();
+      updateFetchButtonState();
+      applyAdvDecApiJson(json, false);
+    }catch(e){
+      showStatus('ad-status', 'Fetch failed (' + e.message + '). Likely CORS — manual entry still works.', 'err');
+    }
+  };
+
+  function applyAdvDecApiJson(json, fromCache){
+    // Expected shape from the advances/declines Worker:
+    // { advances, declines, unchanged, total, timestamp, topGainers, topLosers, all }
+    // Falls back to searching nested "data" objects in case a raw Parse.bot
+    // response (rather than the Worker's shaped output) gets pointed at this field.
+    function findKey(obj, patterns){
+      if(!obj || typeof obj !== 'object') return null;
+      for(const k of Object.keys(obj)){
+        const lower = k.toLowerCase();
+        if(patterns.some(p => lower.includes(p)) && typeof obj[k] !== 'object') return obj[k];
+      }
+      for(const k of Object.keys(obj)){
+        if(typeof obj[k] === 'object'){
+          const found = findKey(obj[k], patterns);
+          if(found !== null) return found;
+        }
+      }
+      return null;
+    }
+
+    const advances = json.advances ?? findKey(json, ['advance']);
+    const declines = json.declines ?? findKey(json, ['decline']);
+    const unchanged = json.unchanged ?? findKey(json, ['unchange']);
+
+    if(advances == null || declines == null){
+      showStatus('ad-status', 'Connected, but the response shape was not recognized. Raw preview: ' + JSON.stringify(json).slice(0,200), 'err');
+      return;
+    }
+
+    document.getElementById('ad-advances').value = advances;
+    document.getElementById('ad-declines').value = declines;
+    if(unchanged != null) document.getElementById('ad-unchanged').value = unchanged;
+
+    const gainers = json.topGainers || [];
+    const losers = json.topLosers || [];
+    renderAdDetailTables(gainers, losers);
+
+    if(fromCache){
+      showStatus('ad-status', 'Loaded from today\'s saved data — no API call made. Review below, then click "Log entry" to save.', 'ok');
+    } else {
+      showStatus('ad-status', 'Fetched — review the counts below, then click "Log entry" to save.', 'ok');
+    }
+  }
+
+  function adDetailRow(r){
+    const chg = (r.change ?? 0);
+    const pchg = (r.pchange ?? r.pChange ?? 0);
+    const color = chg > 0 ? 'var(--up)' : (chg < 0 ? 'var(--down)' : 'inherit');
+    return '<tr>' +
+      '<td class="mono">' + (r.symbol||'') + '</td>' +
+      '<td class="mono">' + (r.series||'') + '</td>' +
+      '<td class="mono">' + (r.lastPrice ?? '') + '</td>' +
+      '<td class="mono" style="color:' + color + '">' + chg.toFixed(2) + ' (' + pchg.toFixed(2) + '%)</td>' +
+      '<td class="mono">' + (r.previousClose ?? '') + '</td>' +
+      '</tr>';
+  }
+
+  function adDetailTable(title, list){
+    if(!list || list.length === 0){
+      return '<h4 style="margin:16px 0 6px">' + title + ' (0)</h4><div class="empty-state">None today.</div>';
+    }
+    const rows = list.map(adDetailRow).join('');
+    return '<h4 style="margin:16px 0 6px">' + title + ' (' + list.length + ')</h4>' +
+      '<div style="overflow-x:auto"><table class="data-table"><thead><tr>' +
+      '<th>Symbol</th><th>Series</th><th>LTP</th><th>Change</th><th>Prev Close</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  window.renderAdDetailTables = function(gainers, losers){
+    const card = document.getElementById('ad-detail-card');
+    const container = document.getElementById('ad-detail-tables');
+    container.innerHTML = adDetailTable('Top gainers', gainers) + adDetailTable('Top losers', losers);
+    card.style.display = 'block';
+  };
+
+  window.applyAdRange = function(){
+    const from = document.getElementById('ad-range-from').value;
+    const to = document.getElementById('ad-range-to').value;
+    if(from && to && from > to){
+      showStatus('ad-status', '"From" date is after "To" date.', 'err');
+      return;
+    }
+    adRange = { from: from || null, to: to || null };
+    renderAdvDecChart();
+  };
+
+  window.resetAdRange = function(){
+    adRange = { from: null, to: null };
+    document.getElementById('ad-range-from').value = '';
+    document.getElementById('ad-range-to').value = '';
+    renderAdvDecChart();
+  };
+
+  function renderAdvDecChart(){
+    const allDates = Object.keys(state.adLog).sort();
+    const container = document.getElementById('ad-chart');
+    if(allDates.length === 0){
+      container.innerHTML = '<div class="empty-state">No entries yet — log today\'s advances/declines above to start tracking.</div>';
+      return;
+    }
+    let recent;
+    if(adRange.from || adRange.to){
+      recent = allDates.filter(d => (!adRange.from || d >= adRange.from) && (!adRange.to || d <= adRange.to));
+      if(recent.length === 0){
+        container.innerHTML = '<div class="empty-state">No entries logged in that date range.</div>';
+        return;
+      }
+    } else {
+      recent = allDates.slice(-20);
+    }
+    const W = 760, H = 240, padL = 44, padR = 16, padT = 16, padB = 30;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxVal = Math.max(1, ...recent.map(d => Math.max(state.adLog[d].advances, state.adLog[d].declines)));
+    // round the axis ceiling up to a friendly number
+    const niceMax = Math.ceil(maxVal / 50) * 50 || maxVal;
+    const stepX = recent.length > 1 ? plotW / (recent.length - 1) : 0;
+    const xAt = i => padL + stepX * i;
+    const yAt = v => padT + plotH - (v / niceMax) * plotH;
+
+    const advPts = recent.map((d, i) => [xAt(i), yAt(state.adLog[d].advances)]);
+    const decPts = recent.map((d, i) => [xAt(i), yAt(state.adLog[d].declines)]);
+    const toPath = pts => pts.map(p => p.join(',')).join(' ');
+    const advArea = `${padL},${padT + plotH} ${toPath(advPts)} ${xAt(recent.length - 1)},${padT + plotH}`;
+    const decArea = `${padL},${padT + plotH} ${toPath(decPts)} ${xAt(recent.length - 1)},${padT + plotH}`;
+
+    // 4 horizontal gridlines including baseline
+    const gridCount = 4;
+    let gridlines = '';
+    for(let g = 0; g <= gridCount; g++){
+      const v = Math.round((niceMax / gridCount) * g);
+      const y = yAt(v);
+      gridlines += `<line class="gridline" x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"></line>
+        <text class="axis-label" x="${padL - 8}" y="${y + 3}" text-anchor="end">${v}</text>`;
+    }
+
+    // date labels — skip some if crowded
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmtDate = d => {
+      const [y, m, day] = d.split('-');
+      return `${parseInt(day,10)} ${monthNames[parseInt(m,10)-1]} ${y}`;
+    };
+    const labelEvery = recent.length > 10 ? Math.ceil(recent.length / 8) : 1;
+    let dateLabels = '';
+    recent.forEach((d, i) => {
+      if(i % labelEvery !== 0 && i !== recent.length - 1) return;
+      dateLabels += `<text class="date-label" x="${xAt(i)}" y="${H - 8}" text-anchor="middle">${fmtDate(d)}</text>`;
+    });
+
+    const advDots = advPts.map((p, i) => `<circle class="adv-dot" cx="${p[0]}" cy="${p[1]}" r="3"><title>${recent[i]}: ${state.adLog[recent[i]].advances} advances</title></circle>`).join('');
+    const decDots = decPts.map((p, i) => `<circle class="dec-dot" cx="${p[0]}" cy="${p[1]}" r="3"><title>${recent[i]}: ${state.adLog[recent[i]].declines} declines</title></circle>`).join('');
+
+    container.innerHTML = `
+      <div class="adchart-legend">
+        <div class="adchart-legend-item"><span class="adchart-legend-dot" style="background:var(--up)"></span>Advances</div>
+        <div class="adchart-legend-item"><span class="adchart-legend-dot" style="background:var(--down)"></span>Declines</div>
+      </div>
+      <svg class="adchart-svg" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">
+        ${gridlines}
+        <polygon class="adv-area" points="${advArea}"></polygon>
+        <polygon class="dec-area" points="${decArea}"></polygon>
+        <polyline class="adv-line" points="${toPath(advPts)}"></polyline>
+        <polyline class="dec-line" points="${toPath(decPts)}"></polyline>
+        ${advDots}
+        ${decDots}
+        ${dateLabels}
+      </svg>`;
+  }
+
+
+  // ---- Watchlist ----
+  window.addWatchlistRow = async function(){
+    const symbol = document.getElementById('wl-symbol').value.trim().toUpperCase();
+    const price = parseFloat(document.getElementById('wl-price').value);
+    const high = parseFloat(document.getElementById('wl-high').value);
+    const buy = document.getElementById('wl-buy').value;
+    if(!symbol || isNaN(price) || isNaN(high)){
+      alert('Enter a symbol, current price, and 52-week high.');
+      return;
+    }
+    state.watchlist.push({
+      id: Date.now().toString(36),
+      symbol, price, high,
+      buy: buy ? parseFloat(buy) : null
+    });
+    await saveState();
+    document.getElementById('wl-symbol').value = '';
+    document.getElementById('wl-price').value = '';
+    document.getElementById('wl-high').value = '';
+    document.getElementById('wl-buy').value = '';
+    render();
+  };
+
+  window.removeWatchlistRow = async function(id){
+    state.watchlist = state.watchlist.filter(r => r.id !== id);
+    await saveState();
+    render();
+  };
+
+  function renderWatchlist(){
+    const container = document.getElementById('watchlist-table');
+    if(state.watchlist.length === 0){
+      container.innerHTML = '<div class="empty-state">No stocks added yet.</div>';
+      return;
+    }
+    let rows = state.watchlist.map(r=>{
+      const fromHigh = ((r.price - r.high) / r.high) * 100;
+      const fromHighCls = fromHigh >= 0 ? 'pos' : (fromHigh > -5 ? '' : 'neg');
+      let plCell = '<td class="mono">—</td>';
+      if(r.buy){
+        const pl = ((r.price - r.buy) / r.buy) * 100;
+        plCell = `<td class="mono ${pl>=0?'pos':'neg'}">${pl>=0?'+':''}${pl.toFixed(2)}%</td>`;
+      }
+      return `<tr>
+        <td class="sans" style="font-weight:600">${r.symbol}</td>
+        <td class="mono">${r.price.toFixed(2)}</td>
+        <td class="mono">${r.high.toFixed(2)}</td>
+        <td class="mono ${fromHighCls}">${fromHigh.toFixed(2)}%</td>
+        ${plCell}
+        <td><button class="danger" onclick="removeWatchlistRow('${r.id}')">Remove</button></td>
+      </tr>`;
+    }).join('');
+    container.innerHTML = `<table>
+      <thead><tr>
+        <th>Symbol</th><th>Price</th><th>52W High</th><th>% From High</th><th>P/L %</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  window.refreshWatchlistFromApi = async function(){
+    if(!state.apiUrl){
+      showStatus('watchlist-status', 'No API endpoint configured yet — set one in Settings.', 'err');
+      return;
+    }
+    if(state.watchlist.length === 0){
+      showStatus('watchlist-status', 'Add a stock to your list first.', 'err');
+      return;
+    }
+    showStatus('watchlist-status', 'Fetching…', 'info');
+    try{
+      const res = await fetch(state.apiUrl, { headers: state.apiKey ? { 'X-API-Key': state.apiKey } : {} });
+      if(!res.ok){
+        const txt = await res.text();
+        showStatus('watchlist-status', 'API returned HTTP ' + res.status + ': ' + txt.slice(0,150), 'err');
+        return;
+      }
+      const json = await res.json();
+      const highs = Array.isArray(json.highs) ? json.highs : [];
+      const lows = Array.isArray(json.lows) ? json.lows : [];
+
+      // Build a lookup by symbol. Prefer highs if a symbol somehow appears in both.
+      const bySymbol = {};
+      lows.forEach(r => { if(r.symbol) bySymbol[r.symbol.toUpperCase()] = { record: r, kind: 'low' }; });
+      highs.forEach(r => { if(r.symbol) bySymbol[r.symbol.toUpperCase()] = { record: r, kind: 'high' }; });
+
+      let updated = 0, notFound = 0;
+      state.watchlist.forEach(row => {
+        const hit = bySymbol[row.symbol.toUpperCase()];
+        if(!hit){ notFound++; return; }
+        row.price = hit.record.ltp;
+        if(hit.kind === 'high'){
+          row.high = hit.record.new52WHL;
+        }
+        updated++;
+      });
+
+      await saveState();
+      render();
+
+      if(updated === 0){
+        showStatus('watchlist-status', 'None of your ' + state.watchlist.length + ' watchlist symbols are on today\'s 52-week high/low list — nothing to update.', 'err');
+      } else {
+        showStatus('watchlist-status', 'Updated ' + updated + ' of ' + state.watchlist.length + ' stocks from today\'s data' + (notFound ? ' (' + notFound + ' not on today\'s list, left unchanged)' : '') + '.', 'ok');
+      }
+    }catch(e){
+      showStatus('watchlist-status', 'Fetch failed (' + e.message + '). Likely CORS — manual entry still works.', 'err');
+    }
+  };
+
+  // ---- Settings / API ----
+  window.clearApiCache = async function(){
+    state.apiCache = null;
+    await saveState();
+    updateFetchButtonState();
+    showStatus('api-status', 'Cleared. Next "Fetch from API" click (on either card) will hit the network.', 'ok');
+  };
+
+  window.saveApiSettings = async function(){
+    state.apiUrl = document.getElementById('api-url').value.trim();
+    state.apiKey = document.getElementById('api-key').value.trim();
+    await saveState();
+    showStatus('api-status', 'Saved to browser storage.', 'ok');
+  };
+
+  window.testApiConnection = async function(){
+    const url = document.getElementById('api-url').value.trim();
+    const key = document.getElementById('api-key').value.trim();
+    if(!url){ showStatus('api-status', 'Enter an endpoint URL first.', 'err'); return; }
+    showStatus('api-status', 'Testing…', 'info');
+    try{
+      const res = await fetch(url, { headers: key ? { 'X-API-Key': key } : {} });
+      const text = await res.text();
+      if(res.ok){
+        showStatus('api-status', 'Connected — HTTP ' + res.status + '. Response preview: ' + text.slice(0,180), 'ok');
+      } else {
+        showStatus('api-status', 'Request failed — HTTP ' + res.status + '. ' + text.slice(0,180), 'err');
+      }
+    }catch(e){
+      showStatus('api-status', 'Fetch blocked or failed (' + e.message + '). This is usually a CORS restriction from the provider — manual logging still works.', 'err');
+    }
+  };
+
+  function showStatus(elId, msg, kind){
+    const el = document.getElementById(elId);
+    el.innerHTML = `<div class="status-msg status-${kind}">${msg}</div>`;
+  }
+
+  function updateStatBar(){
+    const dates = Object.keys(state.breadthLog).sort();
+    if(dates.length){
+      const latest = state.breadthLog[dates[dates.length-1]];
+      document.getElementById('stat-highs').textContent = latest.highs;
+      document.getElementById('stat-lows').textContent = latest.lows;
+      const ratio = latest.lows === 0 ? (latest.highs>0 ? '∞' : '—') : (latest.highs/latest.lows).toFixed(2);
+      document.getElementById('stat-ratio').textContent = ratio;
+    } else {
+      document.getElementById('stat-highs').textContent = '—';
+      document.getElementById('stat-lows').textContent = '—';
+      document.getElementById('stat-ratio').textContent = '—';
+    }
+    document.getElementById('stat-watch').textContent = state.watchlist.length;
+  }
+
+  function updateFetchButtonState(){
+    const today = todayIST();
+    const isCached = !!(state.apiCache && state.apiCache.date === today && state.apiCache.json);
+    const ids = ['fetch-highlow-btn', 'fetch-advdec-btn'];
+    ids.forEach(id => {
+      const btn = document.getElementById(id);
+      if(!btn) return;
+      if(isCached){
+        btn.innerHTML = '&#10003; Go';
+        btn.title = 'Today\'s data is already loaded from storage — click to view it (no API call).';
+        btn.classList.add('cached');
+      } else {
+        btn.textContent = 'Fetch from API';
+        btn.title = 'No data loaded yet today — click to fetch from the API.';
+        btn.classList.remove('cached');
+      }
+    });
+  }
+
+  function render(){
+    renderBreadthChart();
+    renderAdvDecChart();
+    renderWatchlist();
+    updateStatBar();
+    updateFetchButtonState();
+    if(state.apiUrl) document.getElementById('api-url').value = state.apiUrl;
+    if(state.apiKey) document.getElementById('api-key').value = state.apiKey;
+  }
+
+  window.exportBackup = function(){
+    if(typeof XLSX === 'undefined'){
+      showStatus('backup-status', 'Spreadsheet library failed to load (needs an internet connection). Try again once you\'re online.', 'err');
+      return;
+    }
+    const breadthDates = Object.keys(state.breadthLog).sort();
+    const breadthRows = breadthDates.map(d => {
+      const e = state.breadthLog[d];
+      return { Date: d, 'New Highs': e.highs, 'New Lows': e.lows, 'Nifty Close': e.nifty ?? '' };
+    });
+
+    const adDates = Object.keys(state.adLog).sort();
+    const adRows = adDates.map(d => {
+      const e = state.adLog[d];
+      return { Date: d, Advances: e.advances, Declines: e.declines, Unchanged: e.unchanged ?? '' };
+    });
+
+    const wlRows = state.watchlist.map(r => ({
+      Symbol: r.symbol, Price: r.price, '52W High': r.high, 'Buy Price': r.buy ?? ''
+    }));
+
+    const wb = XLSX.utils.book_new();
+    wb.SheetNames.push('Breadth');
+    wb.Sheets['Breadth'] = XLSX.utils.json_to_sheet(breadthRows.length ? breadthRows : [{ Date: '', 'New Highs': '', 'New Lows': '', 'Nifty Close': '' }]);
+    wb.SheetNames.push('Advances-Declines');
+    wb.Sheets['Advances-Declines'] = XLSX.utils.json_to_sheet(adRows.length ? adRows : [{ Date: '', Advances: '', Declines: '', Unchanged: '' }]);
+    wb.SheetNames.push('Watchlist');
+    wb.Sheets['Watchlist'] = XLSX.utils.json_to_sheet(wlRows.length ? wlRows : [{ Symbol: '', Price: '', '52W High': '', 'Buy Price': '' }]);
+
+    const today = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `suchana-dashboard-backup-${today}.xlsx`);
+    showStatus('backup-status', 'Backup downloaded as a spreadsheet. Import it into any new copy of this dashboard to bring your history along.', 'ok');
+  };
+
+  window.importBackup = async function(){
+    if(typeof XLSX === 'undefined'){
+      showStatus('backup-status', 'Spreadsheet library failed to load (needs an internet connection). Try again once you\'re online.', 'err');
+      return;
+    }
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput.files[0];
+    if(!file){
+      showStatus('backup-status', 'Choose a backup spreadsheet file first.', 'err');
+      return;
+    }
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      let addedBreadth = 0, addedAd = 0, addedWatch = 0;
+
+      const breadthSheet = wb.Sheets['Breadth'];
+      if(breadthSheet){
+        const rows = XLSX.utils.sheet_to_json(breadthSheet);
+        rows.forEach(r => {
+          const d = (r.Date || '').toString().trim();
+          if(!d || isNaN(Date.parse(d))) return;
+          const iso = new Date(d).toISOString().slice(0,10);
+          if(!(iso in state.breadthLog)){
+            state.breadthLog[iso] = {
+              highs: Number(r['New Highs']) || 0,
+              lows: Number(r['New Lows']) || 0,
+              nifty: r['Nifty Close'] !== undefined && r['Nifty Close'] !== '' ? Number(r['Nifty Close']) : null
+            };
+            addedBreadth++;
+          }
+        });
+      }
+
+      const adSheet = wb.Sheets['Advances-Declines'];
+      if(adSheet){
+        const rows = XLSX.utils.sheet_to_json(adSheet);
+        rows.forEach(r => {
+          const d = (r.Date || '').toString().trim();
+          if(!d || isNaN(Date.parse(d))) return;
+          const iso = new Date(d).toISOString().slice(0,10);
+          if(!(iso in state.adLog)){
+            state.adLog[iso] = {
+              advances: Number(r.Advances) || 0,
+              declines: Number(r.Declines) || 0,
+              unchanged: r.Unchanged !== undefined && r.Unchanged !== '' ? Number(r.Unchanged) : null
+            };
+            addedAd++;
+          }
+        });
+      }
+
+      const wlSheet = wb.Sheets['Watchlist'];
+      if(wlSheet && state.watchlist.length === 0){
+        const rows = XLSX.utils.sheet_to_json(wlSheet);
+        rows.forEach(r => {
+          const symbol = (r.Symbol || '').toString().trim().toUpperCase();
+          if(!symbol) return;
+          state.watchlist.push({
+            id: Date.now().toString(36) + addedWatch,
+            symbol,
+            price: Number(r.Price) || 0,
+            high: Number(r['52W High']) || 0,
+            buy: r['Buy Price'] !== undefined && r['Buy Price'] !== '' ? Number(r['Buy Price']) : null
+          });
+          addedWatch++;
+        });
+      }
+
+      await saveState();
+      render();
+      showStatus('backup-status', `Imported — added ${addedBreadth} breadth day(s), ${addedAd} advances/declines day(s), and ${addedWatch} watchlist row(s) you didn't already have. Existing entries for the same date were left as-is.`, 'ok');
+      fileInput.value = '';
+    }catch(e){
+      showStatus('backup-status', 'Could not read that spreadsheet (' + e.message + ').', 'err');
+    }
+  };
+
+  loadState();
+})();
+</script>
+</body>
+</html>
